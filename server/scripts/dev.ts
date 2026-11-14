@@ -1,7 +1,7 @@
 // Local dev server: `npm run dev` -> http://localhost:8787/api/render
 // Adapts Node's http module to the same Web Request handler Vercel runs.
 import { createServer } from "node:http";
-import { handleRender } from "../lib/handler.ts";
+import { handleRender } from "../lib/handler.js";
 
 const port = Number(process.env.PORT) || 8787;
 

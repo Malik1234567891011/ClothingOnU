@@ -2,10 +2,10 @@
 // Vercel and in the local dev server.
 
 import { timingSafeEqual } from "node:crypto";
-import { configFromEnv, generateImage, type ModelConfig } from "./gemini.ts";
-import { buildParts } from "./prompts.ts";
-import { ApiError, parseRenderRequest } from "./validate.ts";
-import type { ErrorResponse, RenderResponse } from "./types.ts";
+import { configFromEnv, generateImage, type ModelConfig } from "./gemini.js";
+import { buildParts } from "./prompts.js";
+import { ApiError, parseRenderRequest } from "./validate.js";
+import type { ErrorResponse, RenderResponse } from "./types.js";
 
 /** Vercel rejects bodies over 4.5 MB; fail with a clear message before that. */
 const MAX_BODY_BYTES = 4_400_000;

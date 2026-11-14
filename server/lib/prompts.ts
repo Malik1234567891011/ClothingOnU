@@ -10,7 +10,7 @@
 //    model to extract only the garment.
 //  - The user note is fenced as styling-only so it cannot rewrite the task.
 
-import type { Build, Garment, ImageData, Photo, Profile, RenderRequest, Slot, View } from "./types.ts";
+import type { Build, Garment, ImageData, Photo, Profile, RenderRequest, Slot, View } from "./types.js";
 
 export type Part = { text: string } | { inlineData: { mimeType: string; data: string } };
 

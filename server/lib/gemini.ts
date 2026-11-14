@@ -1,8 +1,8 @@
 // Thin Gemini image client: one generateContent call, typed failures, bounded retries.
 
-import { ApiError } from "./validate.ts";
-import type { ImageData, Quality } from "./types.ts";
-import type { Part } from "./prompts.ts";
+import { ApiError } from "./validate.js";
+import type { ImageData, Quality } from "./types.js";
+import type { Part } from "./prompts.js";
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 const BLOCK_REASONS = new Set(["SAFETY", "PROHIBITED_CONTENT", "IMAGE_SAFETY", "BLOCKLIST", "SPII", "IMAGE_PROHIBITED_CONTENT", "RECITATION"]);

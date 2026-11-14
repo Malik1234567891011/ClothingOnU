@@ -10,7 +10,7 @@ import {
   type Photo,
   type Profile,
   type RenderRequest,
-} from "./types.ts";
+} from "./types.js";
 
 export class ApiError extends Error {
   readonly code: ErrorCode;

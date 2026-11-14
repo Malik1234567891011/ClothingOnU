@@ -1,9 +1,9 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseRenderRequest, ApiError } from "../lib/validate.ts";
-import { buildParts, type Part } from "../lib/prompts.ts";
-import { extractImage, generateImage, type ModelConfig } from "../lib/gemini.ts";
-import { handleRender } from "../lib/handler.ts";
+import { parseRenderRequest, ApiError } from "../lib/validate.js";
+import { buildParts, type Part } from "../lib/prompts.js";
+import { extractImage, generateImage, type ModelConfig } from "../lib/gemini.js";
+import { handleRender } from "../lib/handler.js";
 
 const B64 = "A".repeat(200);
 const jpg = { mimeType: "image/jpeg", data: B64 };

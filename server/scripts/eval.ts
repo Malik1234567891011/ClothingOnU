@@ -8,8 +8,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { handleRender } from "../lib/handler.ts";
-import type { Build, Garment, ImageData, Photo, RenderResponse } from "../lib/types.ts";
+import { handleRender } from "../lib/handler.js";
+import type { Build, Garment, ImageData, Photo, RenderResponse } from "../lib/types.js";
 
 interface Case {
   heightCm: number;
