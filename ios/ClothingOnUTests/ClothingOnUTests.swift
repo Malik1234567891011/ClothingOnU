@@ -22,12 +22,14 @@ private final class FakeRenderer: Renderer, @unchecked Sendable {
     private let lock = NSLock()
     private var _requests: [[String: Any]] = []
     var failWith: RenderError?
+    var delay: Duration = .zero
 
     var requests: [[String: Any]] { lock.withLock { _requests } }
 
     func render(_ request: RenderRequest) async throws -> RenderResult {
         let json = try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as! [String: Any]
         lock.withLock { _requests.append(json) }
+        if delay > .zero { try await Task.sleep(for: delay) }
         if let failWith { throw failWith }
         let jpeg = solidImage(30, 40).jpegData(compressionQuality: 0.5)!
         return RenderResult(image: WireImage(jpeg: jpeg), model: "fake", ms: 1)
@@ -237,6 +239,58 @@ struct StudioTests {
         #expect(!studio.canTryOn)
         await studio.tryOn()
         #expect(fake.requests.count == 1) // just the avatar
+    }
+}
+
+@MainActor
+struct StudioSafetyTests {
+    @Test func oversizedRequestsDropLeastImportantPhotosFirst() {
+        let big = WireImage(jpeg: Data(count: 900_000)) // ~1.2 MB base64 each
+        let photos = [PhotoRole.front, .face, .side, .back].map { WirePhoto(role: $0, image: big) }
+        let kept = Studio.fitPhotos(photos, fixedBytes: 1_000_000, budget: 3_800_000)
+        #expect(kept.map(\.role) == [.front, .face])
+        #expect(Studio.fitPhotos(photos, fixedBytes: 0, budget: 10_000_000).count == 4)
+    }
+
+    @Test func startOverDiscardsAnInFlightTryOn() async throws {
+        let lib = Library(root: tempRoot())
+        lib.setProfile(.default)
+        try lib.setPhoto(solidImage(600, 1200), for: .front)
+        let fake = FakeRenderer()
+        let studio = Studio(library: lib, renderer: fake)
+        await studio.buildAvatar()
+        try lib.setGarment(solidImage(200, 200), slot: .top)
+
+        fake.delay = .milliseconds(200)
+        studio.startTryOn()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(studio.tryOnJob.isWorking)
+        studio.startOver()
+        try await Task.sleep(for: .milliseconds(400))
+        #expect(lib.looks.isEmpty, "a render from before the reset must not land in the new library")
+        #expect(lib.profile == nil)
+        #expect(!studio.tryOnJob.isWorking)
+    }
+}
+
+@MainActor
+struct PersistenceFormatTests {
+    @Test func enumKeyedDictionariesEncodeAsObjects() throws {
+        let root = tempRoot()
+        let lib = Library(root: root)
+        try lib.setPhoto(solidImage(100, 200), for: .front)
+        let json = try JSONSerialization.jsonObject(with: Data(contentsOf: root.appending(path: "library.json"))) as? [String: Any]
+        #expect(json?["photos"] is [String: Any])
+    }
+
+    @Test func unreadableIndexIsBackedUpNotLost() throws {
+        let root = tempRoot()
+        _ = Library(root: root)
+        try Data("{not json".utf8).write(to: root.appending(path: "library.json"))
+        let lib = Library(root: root)
+        #expect(lib.profile == nil)
+        let files = try FileManager.default.contentsOfDirectory(atPath: root.path)
+        #expect(files.contains { $0.hasPrefix("library.unreadable-") })
     }
 }
 

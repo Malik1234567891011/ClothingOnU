@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 // Wire format for POST /api/render. Mirrors server/lib/types.ts; keep the two in sync.
 
@@ -99,6 +100,7 @@ enum RenderError: LocalizedError, Equatable, Sendable {
     case timedOut
     case blocked(String)
     case busy
+    case tooLarge
     case server(String)
     case misconfigured(String)
 
@@ -108,6 +110,7 @@ enum RenderError: LocalizedError, Equatable, Sendable {
         case .timedOut: "That took too long. Try again; it usually works the second time."
         case .blocked(let m): m
         case .busy: "The try-on engine is busy right now. Give it a few seconds."
+        case .tooLarge: "Those images are too large to send. Try cropping the screenshots or using fewer items."
         case .server(let m): m
         case .misconfigured(let m): m
         }
@@ -116,7 +119,7 @@ enum RenderError: LocalizedError, Equatable, Sendable {
     var isRetryable: Bool {
         switch self {
         case .offline, .timedOut, .busy, .server: true
-        case .blocked, .misconfigured: false
+        case .blocked, .misconfigured, .tooLarge: false
         }
     }
 }
@@ -139,6 +142,14 @@ struct RenderAPI: Sendable {
     }()
 
     func render(_ request: RenderRequest) async throws -> RenderResult {
+        // Users often switch to Safari for the next screenshot while a render runs. Ask iOS for
+        // background time so the in-flight request (~25 s) isn't killed on suspension.
+        let bg = await MainActor.run { UIApplication.shared.beginBackgroundTask(withName: "render") }
+        defer { Task { @MainActor in UIApplication.shared.endBackgroundTask(bg) } }
+        return try await send(request)
+    }
+
+    private func send(_ request: RenderRequest) async throws -> RenderResult {
         var req = URLRequest(url: baseURL.appending(path: "api/render"))
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "content-type")
@@ -173,6 +184,7 @@ struct RenderAPI: Sendable {
         switch (status, envelope?.error.code) {
         case (_, "blocked"): throw RenderError.blocked(message)
         case (429, _), (_, "rate_limited"): throw RenderError.busy
+        case (413, _), (_, "payload_too_large"): throw RenderError.tooLarge
         case (401, _): throw RenderError.misconfigured("This build of the app isn't authorised to use the server.")
         case (504, _): throw RenderError.timedOut
         default: throw RenderError.server(message)

@@ -66,6 +66,8 @@ struct OutfitPanel: View {
                     TrayItem(garment: g, image: library.garmentImage(g),
                              onTap: { onAdd(g.slot) },
                              onRemove: { library.removeGarment(g.slot) })
+                        // Locked while rendering: the render is using these files.
+                        .disabled(studio.tryOnJob.isWorking)
                 }
                 if outfit.count < Slot.allCases.count {
                     Menu {
@@ -79,6 +81,7 @@ struct OutfitPanel: View {
                             .background(Theme.hairline.opacity(0.5), in: .rect(cornerRadius: Theme.Radius.s))
                     }
                     .accessibilityLabel("Add another item")
+                    .disabled(studio.tryOnJob.isWorking)
                 }
             }
             .padding(.vertical, 2)

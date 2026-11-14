@@ -12,6 +12,7 @@ export interface ModelConfig {
   pro: string;
   fast: string;
   timeoutMs: number;
+  deadlineMs: number;
 }
 
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ModelConfig {
@@ -22,6 +23,8 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env): ModelConfig
     pro: env.MODEL_PRO || "gemini-3-pro-image",
     fast: env.MODEL_FAST || "gemini-nano-banana-2.1",
     timeoutMs: Number(env.MODEL_TIMEOUT_MS) || 90_000,
+    // Total budget across retries + fallback. The iOS client waits 200 s, so finish well before.
+    deadlineMs: Number(env.MODEL_DEADLINE_MS) || 170_000,
   };
 }
 
@@ -48,11 +51,10 @@ export function extractImage(body: GeminiResponse): ImageData {
   if (cand?.finishReason && BLOCK_REASONS.has(cand.finishReason)) {
     throw new ApiError("blocked", 422, `The image was blocked by the model's safety filter (${cand.finishReason}). Try a different photo or garment.`);
   }
-  const said = parts.map((p) => p.text).filter(Boolean).join(" ").slice(0, 200);
-  throw new ApiError("no_image", 502, `The model returned no image${said ? `: ${said}` : ""}.`);
+  throw new ApiError("no_image", 502, "The model didn't return an image. Please try again.");
 }
 
-async function callOnce(cfg: ModelConfig, model: string, parts: Part[], fetchImpl: typeof fetch): Promise<ImageData> {
+async function callOnce(cfg: ModelConfig, model: string, parts: Part[], fetchImpl: typeof fetch, timeoutMs: number): Promise<ImageData> {
   const res = await fetchImpl(`${ENDPOINT}/${model}:generateContent`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-goog-api-key": cfg.apiKey },
@@ -63,7 +65,7 @@ async function callOnce(cfg: ModelConfig, model: string, parts: Part[], fetchImp
         imageConfig: { aspectRatio: "3:4", imageSize: "2K" },
       },
     }),
-    signal: AbortSignal.timeout(cfg.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   const body = (await res.json().catch(() => ({}))) as GeminiResponse;
   if (!res.ok) {
@@ -89,10 +91,14 @@ export async function generateImage(
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ image: ImageData; model: string }> {
   const plan = quality === "pro" ? [cfg.pro, cfg.pro, cfg.fast] : [cfg.fast, cfg.fast];
-  let last: unknown;
+  const deadline = Date.now() + cfg.deadlineMs;
+  let last: unknown = new ApiError("upstream", 504, "The model took too long.");
   for (const model of plan) {
+    const remaining = deadline - Date.now();
+    // Not worth starting an attempt that can't finish; a render needs ~20 s.
+    if (remaining < 25_000) break;
     try {
-      return { image: await callOnce(cfg, model, parts, fetchImpl), model };
+      return { image: await callOnce(cfg, model, parts, fetchImpl, Math.min(cfg.timeoutMs, remaining)), model };
     } catch (e) {
       last = e instanceof Error && e.name === "TimeoutError" ? new ApiError("upstream", 504, "The model took too long.") : e;
       if (!retryable(last)) break;

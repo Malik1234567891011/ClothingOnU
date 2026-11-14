@@ -174,6 +174,11 @@ struct Garment: Identifiable, Codable, Equatable, Sendable {
     var file: String
 }
 
+// Dictionaries keyed by these enums encode as JSON objects ({"front": ...}) rather than
+// flat [key, value, ...] arrays.
+extension PhotoRole: CodingKeyRepresentable {}
+extension Slot: CodingKeyRepresentable {}
+
 // MARK: - Looks
 
 enum ViewAngle: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -190,6 +195,8 @@ enum ViewAngle: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 }
+
+extension ViewAngle: CodingKeyRepresentable {}
 
 /// A finished try-on: the garments used and one rendered image per angle.
 struct Look: Identifiable, Codable, Equatable, Sendable {

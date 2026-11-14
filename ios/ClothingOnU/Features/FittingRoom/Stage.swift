@@ -10,8 +10,13 @@ struct Stage: View {
     var anchors: BodyVision.Anchors
     var onPin: (Slot) -> Void
 
-    @State private var comparing = false
+    /// GestureState resets itself when a gesture ends *or is cancelled* (incoming call,
+    /// Control Center), so the stage can't get stuck on "Before" or a stale drag origin.
+    @GestureState private var pressing = false
+    @GestureState private var dragging = false
     @State private var dragStartIndex: Int?
+
+    private var comparing: Bool { pressing && look != nil }
 
     private var look: Look? { studio.currentLook }
     private var showsPins: Bool { angle == .front && !studio.tryOnJob.isWorking && !comparing }
@@ -52,6 +57,7 @@ struct Stage: View {
             .contentShape(.rect)
             .gesture(turnGesture, including: look == nil ? .subviews : .all)
             .simultaneousGesture(compareGesture)
+            .onChange(of: dragging) { _, isDragging in if !isDragging { dragStartIndex = nil } }
             .animation(.easeInOut(duration: 0.35), value: imageIdentity)
             .animation(.easeInOut(duration: 0.25), value: showsPins)
         }
@@ -105,6 +111,7 @@ struct Stage: View {
     /// Horizontal drag steps through the turnaround; ~70 pt per angle feels like turning a figure.
     private var turnGesture: some Gesture {
         DragGesture(minimumDistance: 12)
+            .updating($dragging) { _, state, _ in state = true }
             .onChanged { value in
                 guard look != nil, abs(value.translation.width) > abs(value.translation.height) else { return }
                 let order = Studio.turnaround
@@ -116,16 +123,14 @@ struct Stage: View {
                 let next = min(max(start + Int((-value.translation.width / 70).rounded()), 0), order.count - 1)
                 if order[next] != angle { angle = order[next] }
             }
-            .onEnded { _ in dragStartIndex = nil }
     }
 
     private var compareGesture: some Gesture {
         LongPressGesture(minimumDuration: 0.25, maximumDistance: 20)
             .sequenced(before: DragGesture(minimumDistance: 0))
-            .onChanged { value in
-                if case .second(true, _) = value, look != nil, !comparing { comparing = true }
+            .updating($pressing) { value, state, _ in
+                if case .second(true, _) = value { state = true }
             }
-            .onEnded { _ in comparing = false }
     }
 }
 

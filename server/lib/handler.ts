@@ -16,7 +16,9 @@ const json = (status: number, body: unknown) =>
 const errorResponse = (e: ApiError) => json(e.status, { error: { code: e.code, message: e.message } } satisfies ErrorResponse);
 
 function authorized(req: Request, token: string | undefined): boolean {
-  if (!token) return true; // auth disabled (local dev)
+  // No token configured: allowed only for local dev. On Vercel (any environment) fail closed,
+  // so a preview deployment missing the env var isn't an open Gemini proxy.
+  if (!token) return !process.env.VERCEL;
   const got = Buffer.from(req.headers.get("x-app-token") ?? "");
   const want = Buffer.from(token);
   return got.length === want.length && timingSafeEqual(got, want);
@@ -57,7 +59,8 @@ export async function handleRender(req: Request, deps: Deps = {}): Promise<Respo
     return json(200, { image, model, ms } satisfies RenderResponse);
   } catch (e) {
     const err = e instanceof ApiError ? e : new ApiError("upstream", 500, "Unexpected server error.");
-    log({ ok: false, code: err.code, status: err.status, ms: Date.now() - started, detail: e instanceof Error ? e.message.slice(0, 300) : String(e) });
+    // Messages can quote model output that describes the person; log codes, not text.
+    log({ ok: false, code: err.code, status: err.status, ms: Date.now() - started, unexpected: !(e instanceof ApiError) });
     return errorResponse(err);
   }
 }

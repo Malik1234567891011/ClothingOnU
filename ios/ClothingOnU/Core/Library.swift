@@ -113,6 +113,10 @@ final class Library {
 
     /// Re-dress the fitting room in a saved look's garments (for tweaking it).
     func restoreOutfit(from look: Look) {
+        let incoming = Set(look.garments.map(\.file))
+        for g in outfit.values where !incoming.contains(g.file) && !isReferencedByLook(g.file) {
+            delete(.garments, g.file)
+        }
         outfit = Dictionary(uniqueKeysWithValues: look.garments.map { ($0.slot, $0) })
         note = look.note ?? ""
         save()
@@ -124,6 +128,7 @@ final class Library {
 
     @discardableResult
     func addLook(garments: [Garment], note: String?, front: Data) throws -> Look {
+        let garments = garments.filter { fm.fileExists(atPath: url(.garments, $0.file).path) }
         let name = UUID().uuidString + ".jpg"
         try front.write(to: url(.looks, name), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
         let look = Look(id: UUID(), createdAt: .now, garments: garments, note: note, images: [.front: name])
@@ -210,8 +215,16 @@ final class Library {
     private var indexURL: URL { root.appending(path: "library.json") }
 
     private func load() {
-        guard let data = try? Data(contentsOf: indexURL),
-              let s = try? JSONDecoder().decode(Snapshot.self, from: data) else { return }
+        guard let data = try? Data(contentsOf: indexURL) else { return }
+        let s: Snapshot
+        do {
+            s = try JSONDecoder().decode(Snapshot.self, from: data)
+        } catch {
+            // Never silently start empty and overwrite the user's data: keep a copy for recovery.
+            let backup = root.appending(path: "library.unreadable-\(Int(Date().timeIntervalSince1970)).json")
+            try? fm.copyItem(at: indexURL, to: backup)
+            return
+        }
         profile = s.profile; photos = s.photos; avatarFile = s.avatarFile; onboardingDone = s.onboardingDone ?? false
         looks = s.looks; outfit = s.outfit; note = s.note
     }

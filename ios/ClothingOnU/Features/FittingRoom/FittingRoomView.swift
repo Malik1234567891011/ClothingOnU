@@ -66,8 +66,7 @@ struct FittingRoomView: View {
         }
         .confirmationDialog("Start over?", isPresented: $confirmReset, titleVisibility: .visible) {
             Button("Delete my photos, model and looks", role: .destructive) {
-                studio.show(look: nil)
-                library.reset()
+                studio.startOver()
             }
         } message: {
             Text("This removes everything from this phone. It can't be undone.")
@@ -158,6 +157,6 @@ struct FittingRoomView: View {
 
     private func tryOn() {
         studio.dismissTryOnError()
-        Task { await studio.tryOn() }
+        studio.startTryOn()
     }
 }

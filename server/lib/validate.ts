@@ -78,7 +78,8 @@ function note(v: unknown): string | undefined {
   if (v === undefined || v === null) return undefined;
   if (typeof v !== "string") fail("note must be a string");
   // Collapse whitespace and strip control characters; the note is user text inside our prompt.
-  const clean = v.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  // `<` and `>` are removed so the note can't close the <<...>> fence it is placed in.
+  const clean = v.replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim();
   if (clean.length > MAX_NOTE) fail(`note must be at most ${MAX_NOTE} characters`);
   return clean || undefined;
 }
