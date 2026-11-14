@@ -71,8 +71,11 @@ async function callOnce(cfg: ModelConfig, model: string, parts: Part[], fetchImp
   if (!res.ok) {
     const msg = body.error?.message ?? `HTTP ${res.status}`;
     if (res.status === 429) throw new ApiError("rate_limited", 429, "The try-on engine is busy. Try again in a moment.");
-    if (res.status === 400) throw new ApiError("bad_request", 400, `Model rejected the request: ${msg}`);
-    throw new ApiError("upstream", 502, `Model error: ${msg}`);
+    // Never show provider messages to users: they can be about our billing/quota, not their request.
+    console.error(JSON.stringify({ upstream: res.status, model, reason: body.error?.status ?? "unknown" }));
+    void msg;
+    if (res.status === 400) throw new ApiError("bad_request", 400, "The try-on engine couldn't read that request. Try different images.");
+    throw new ApiError("upstream", 503, "The try-on engine is unavailable right now. Please try again in a few minutes.");
   }
   return extractImage(body);
 }
