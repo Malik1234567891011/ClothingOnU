@@ -1,0 +1,18 @@
+{
+  "name": "clothingonu-server",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "node --env-file=.env.local scripts/dev.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc -p .",
+    "eval": "node --env-file=.env.local scripts/eval.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^5.9.3"
+  }
+}
