@@ -36,6 +36,7 @@ struct GarmentEditor: View {
             .background(Theme.canvas.ignoresSafeArea())
             .navigationTitle(slot.title)
             .navigationBarTitleDisplayMode(.inline)
+            .tint(Theme.ink)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel", role: .cancel, action: onCancel)

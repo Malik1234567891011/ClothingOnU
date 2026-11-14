@@ -62,10 +62,8 @@ struct OnboardingFlow: View {
 
     /// Returning users (e.g. "Retake photos" from the fitting room) skip what they've done.
     private func resume() {
-        if let p = library.profile { draft = p }
-        if library.avatarFile != nil, library.profile != nil {
-            step = .photos
-        } else if library.profile != nil, !library.photos.isEmpty {
+        if let p = library.profile {
+            draft = p
             step = .photos
         }
     }

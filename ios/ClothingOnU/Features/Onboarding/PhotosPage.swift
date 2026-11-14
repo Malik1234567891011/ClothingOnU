@@ -8,13 +8,14 @@ struct PhotosPage: View {
 
     @State private var picking: PhotoRole?
     @State private var showSource = false
-    @State private var issues: [PhotoRole: [BodyVision.Issue]] = [:]
+    /// nil value = the check couldn't run on this device (e.g. Simulator); show no verdict.
+    @State private var issues: [PhotoRole: [BodyVision.Issue]?] = [:]
     @State private var checking: Set<PhotoRole> = []
 
     private var canContinue: Bool {
         library.photos[.front] != nil
             && checking.isEmpty
-            && !issues.values.joined().contains(where: \.isBlocking)
+            && !issues.values.compactMap { $0 }.joined().contains(where: \.isBlocking)
     }
 
     var body: some View {
@@ -35,7 +36,7 @@ struct PhotosPage: View {
                             PhotoSlotRow(
                                 role: role,
                                 image: library.photo(role),
-                                issues: issues[role] ?? [],
+                                issues: issues[role] ?? nil,
                                 isChecking: checking.contains(role),
                                 onTap: { picking = role; showSource = true },
                                 onRemove: { library.removePhoto(role); issues[role] = nil }
@@ -93,7 +94,7 @@ struct PhotosPage: View {
         let found = await BodyVision.check(image, role: role)
         issues[role] = found
         // Blocking problems (no person, several people) aren't saved; warnings are saved but shown.
-        if !found.contains(where: \.isBlocking) {
+        if !(found ?? []).contains(where: \.isBlocking) {
             try? library.setPhoto(image, for: role)
         }
     }
@@ -109,7 +110,8 @@ struct PhotosPage: View {
 private struct PhotoSlotRow: View {
     let role: PhotoRole
     let image: UIImage?
-    let issues: [BodyVision.Issue]
+    /// nil = not checked (Vision unavailable); [] = checked and fine.
+    let issues: [BodyVision.Issue]?
     let isChecking: Bool
     let onTap: () -> Void
     let onRemove: () -> Void
@@ -129,12 +131,12 @@ private struct PhotoSlotRow: View {
                         .fixedSize(horizontal: false, vertical: true)
                     if isChecking {
                         Label("Checking…", systemImage: "viewfinder").font(.footnote).foregroundStyle(Theme.secondaryInk)
-                    } else if let issue = issues.first {
+                    } else if let issue = issues?.first {
                         Label(issue.message, systemImage: issue.isBlocking ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(issue.isBlocking ? Theme.danger : Theme.warning)
                             .fixedSize(horizontal: false, vertical: true)
-                    } else if image != nil {
+                    } else if image != nil, issues != nil {
                         Label("Looks good", systemImage: "checkmark.circle.fill")
                             .font(.footnote.weight(.medium))
                             .foregroundStyle(.green)

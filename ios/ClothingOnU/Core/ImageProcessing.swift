@@ -59,6 +59,30 @@ enum ImageProcessing {
 }
 
 extension UIImage {
+    /// Average colour of the image's side edges: the studio backdrop of a render. Used behind the
+    /// image so letterboxing blends in instead of showing bars.
+    var backdropColor: UIColor {
+        // Draw into a context with a known RGBA layout; UIGraphicsImageRenderer's layout is BGRA.
+        let side = 16
+        var px = [UInt8](repeating: 0, count: side * side * 4)
+        guard let cg = cgImage ?? ImageProcessing.resized(self, longEdge: 256).cgImage,
+              let ctx = CGContext(data: &px, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)
+        else { return .gray }
+        ctx.interpolationQuality = .medium
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+        var r = 0.0, g = 0.0, b = 0.0
+        // Mid-height on the left and right edges: renders are vignetted, so corners read too dark.
+        let corners = [(1, side / 3), (side - 2, side / 3), (1, side / 2), (side - 2, side / 2), (1, 2 * side / 3), (side - 2, 2 * side / 3)]
+        for (x, y) in corners {
+            let o = (y * side + x) * 4
+            r += Double(px[o]); g += Double(px[o + 1]); b += Double(px[o + 2])
+        }
+        let n = Double(corners.count) * 255
+        return UIColor(red: r / n, green: g / n, blue: b / n, alpha: 1)
+    }
+
     /// Size in pixels, accounting for orientation.
     var pixelSize: CGSize {
         CGSize(width: size.width * scale, height: size.height * scale)

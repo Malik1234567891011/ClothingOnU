@@ -26,6 +26,12 @@ struct Stage: View {
                         .resizable()
                         .scaledToFit()
                         .frame(width: frame.width, height: frame.height)
+                        // Feather the side edges into the backdrop so there's no visible seam.
+                        .mask {
+                            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.04),
+                                                   .init(color: .black, location: 0.96), .init(color: .clear, location: 1)],
+                                           startPoint: .leading, endPoint: .trailing)
+                        }
                         .offset(x: frame.minX, y: frame.minY)
                         .id(imageIdentity)
                         .transition(.opacity)
@@ -40,7 +46,9 @@ struct Stage: View {
                 }
                 overlayBadge(in: frame)
             }
-            .frame(width: geo.size.width, height: geo.size.height)
+            // topLeading matters: children are placed by explicit offsets, so the stack must not
+            // re-centre itself when it shrinks (e.g. while pins are hidden during a render).
+            .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
             .contentShape(.rect)
             .gesture(turnGesture, including: look == nil ? .subviews : .all)
             .simultaneousGesture(compareGesture)
@@ -87,7 +95,7 @@ struct Stage: View {
                 .padding(.horizontal, 14).padding(.vertical, 8)
                 .glassEffect(.regular, in: .capsule)
                 .frame(maxWidth: frame.width - 32)
-                .position(x: frame.midX, y: frame.minY + 36)
+                .position(x: frame.midX, y: frame.maxY - 30) // below the knees, never over the face
                 .transition(.opacity)
         }
     }
@@ -179,7 +187,7 @@ private struct PinsLayer: View {
         let margin: CGFloat = 50
         let x = left ? margin : container.width - margin
         // Clamp so chips stay on screen and clear of the top bar / bottom panel.
-        let y = min(max(dot.y, 70), container.height - 40)
+        let y = min(max(dot.y, 30), container.height - 30)
         return (dot, CGPoint(x: x, y: y))
     }
 }

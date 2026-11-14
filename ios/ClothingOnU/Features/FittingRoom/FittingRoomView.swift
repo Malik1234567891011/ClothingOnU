@@ -7,6 +7,7 @@ struct FittingRoomView: View {
 
     @State private var angle: ViewAngle = .front
     @State private var anchors: BodyVision.Anchors = .fallback
+    @State private var backdrop: Color = Theme.studio
 
     // Adding a garment: pick a source, then crop.
     @State private var pendingSlot: Slot?
@@ -23,24 +24,23 @@ struct FittingRoomView: View {
 
     var body: some View {
         ZStack {
-            Theme.studio.ignoresSafeArea()
-
+            backdrop.ignoresSafeArea()
+            // The stage lives between the top bar and the panel (safe-area insets), so the
+            // whole body, feet included, is always visible and pins are never covered.
             Stage(angle: $angle, anchors: anchors, onPin: add)
-                .ignoresSafeArea(edges: .bottom)
-
-            VStack(spacing: 0) {
-                topBar
-                Spacer()
+        }
+        .safeAreaInset(edge: .top, spacing: 0) { topBar }
+        .safeAreaInset(edge: .bottom, spacing: Theme.Space.s) {
+            VStack(spacing: Theme.Space.s) {
                 if case .working(let startedAt) = studio.tryOnJob {
                     RenderStatus(startedAt: startedAt, messages: Self.tryOnMessages, typicalSeconds: Studio.typicalSeconds)
                         .padding(Theme.Space.m)
                         .glassEffect(.regular, in: .rect(cornerRadius: Theme.Radius.l))
-                        .padding(.bottom, Theme.Space.s)
                         .transition(.opacity.combined(with: .scale(scale: 0.96)))
                 }
                 OutfitPanel(angle: $angle, onAdd: add, onTryOn: tryOn)
-                    .padding(.bottom, Theme.Space.s)
             }
+            .padding(.bottom, Theme.Space.xs)
         }
         .animation(.spring(duration: 0.4), value: studio.tryOnJob.isWorking)
         .imageSource(isPresented: $showSource, title: pendingSlot.map { "Add \($0.title.lowercased())" } ?? "Add item") { image in
@@ -73,7 +73,10 @@ struct FittingRoomView: View {
             Text("This removes everything from this phone. It can't be undone.")
         }
         .task(id: library.avatarFile) {
-            if let avatar = library.avatar { anchors = await BodyVision.anchors(in: avatar) }
+            guard let avatar = library.avatar else { return }
+            // Match the render's own studio backdrop so the photo bleeds into the screen.
+            backdrop = Color(uiColor: avatar.backdropColor)
+            anchors = await BodyVision.anchors(in: avatar)
         }
         .onChange(of: studio.currentLookID) { angle = .front }
         .sensoryFeedback(.success, trigger: studio.currentLookID) { _, new in new != nil }

@@ -32,7 +32,11 @@ struct OutfitPanel: View {
                     emptyHint
                 } else {
                     tray
-                    if showNote || !library.note.isEmpty { noteField(text: $library.note) }
+                    if showNote {
+                        noteField(text: $library.note)
+                    } else if !library.note.isEmpty {
+                        notePreview
+                    }
                 }
 
                 actionRow
@@ -79,6 +83,22 @@ struct OutfitPanel: View {
             }
             .padding(.vertical, 2)
         }
+    }
+
+    /// Collapsed note: one line, tap to edit. Keeps the photo as big as possible.
+    private var notePreview: some View {
+        Button {
+            showNote = true
+            noteFocused = true
+        } label: {
+            Label("“\(library.note)”", systemImage: "text.bubble")
+                .font(.footnote)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Styling note: \(library.note). Tap to edit.")
     }
 
     private func noteField(text: Binding<String>) -> some View {
@@ -134,9 +154,14 @@ struct OutfitPanel: View {
                 .accessibilityLabel("Add a styling note")
                 .accessibilityIdentifier("note.toggle")
             }
-            Button(action: onTryOn) {
+            Button {
+                showNote = false
+                noteFocused = false
+                onTryOn()
+            } label: {
                 Label(tryOnTitle, systemImage: "sparkles")
                     .font(.headline)
+                    .foregroundStyle(Theme.canvas)
                     .frame(maxWidth: .infinity, minHeight: 52)
             }
             .buttonStyle(.glassProminent)

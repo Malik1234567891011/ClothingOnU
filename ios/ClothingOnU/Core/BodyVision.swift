@@ -1,6 +1,9 @@
 import CoreGraphics
+import OSLog
 import UIKit
 import Vision
+
+private let log = Logger(subsystem: "com.clothingonu.app", category: "vision")
 
 /// On-device body analysis with Vision. Nothing here touches the network.
 enum BodyVision {
@@ -62,8 +65,9 @@ enum BodyVision {
 
     // MARK: Photo checks
 
-    static func check(_ image: UIImage, role: PhotoRole) async -> [Issue] {
-        guard let cg = ImageProcessing.resized(image, longEdge: 1024).cgImage else { return [.noPerson] }
+    /// Problems found in a reference photo, or nil if the check couldn't run on this device.
+    static func check(_ image: UIImage, role: PhotoRole) async -> [Issue]? {
+        guard let cg = ImageProcessing.resized(image, longEdge: 1024).cgImage else { return nil }
         return await Task.detached(priority: .userInitiated) {
             role.isFullBody ? checkBody(cg) : checkFace(cg)
         }.value
@@ -71,9 +75,21 @@ enum BodyVision {
 
     private static let minConfidence: Float = 0.3
 
-    private static func checkBody(_ cg: CGImage) -> [Issue] {
+    /// Run a request. Returns false if Vision itself failed (e.g. no model on this device or in the
+    /// Simulator). A failed check must never block the user: we only report what we actually saw.
+    private static func perform(_ request: VNRequest, on cg: CGImage) -> Bool {
+        do {
+            try VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+            return true
+        } catch {
+            log.error("Vision request failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    private static func checkBody(_ cg: CGImage) -> [Issue]? {
         let request = VNDetectHumanBodyPoseRequest()
-        try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+        guard perform(request, on: cg) else { return nil }
         let bodies = request.results ?? []
         guard !bodies.isEmpty else { return [.noPerson] }
         // Ignore tiny background people; count bodies whose torso is reasonably large.
@@ -99,9 +115,9 @@ enum BodyVision {
         return (ys.max() ?? 0) - (ys.min() ?? 0)
     }
 
-    private static func checkFace(_ cg: CGImage) -> [Issue] {
+    private static func checkFace(_ cg: CGImage) -> [Issue]? {
         let request = VNDetectFaceRectanglesRequest()
-        try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+        guard perform(request, on: cg) else { return nil }
         let faces = (request.results ?? []).filter { $0.boundingBox.width > 0.08 }
         if faces.isEmpty { return [.noFace] }
         if faces.count > 1 { return [.multipleFaces] }
@@ -117,7 +133,7 @@ enum BodyVision {
 
     private static func anchors(_ cg: CGImage) -> Anchors? {
         let request = VNDetectHumanBodyPoseRequest()
-        try? VNImageRequestHandler(cgImage: cg, orientation: .up).perform([request])
+        guard perform(request, on: cg) else { return nil }
         guard let body = request.results?.max(by: { bodyHeight($0) < bodyHeight($1) }),
               let pts = try? body.recognizedPoints(.all) else { return nil }
 

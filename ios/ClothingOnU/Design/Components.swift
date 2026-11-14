@@ -68,13 +68,17 @@ struct ScanOverlay: View {
         GeometryReader { geo in
             if active {
                 ZStack {
-                    Color.black.opacity(0.18)
+                    Color.black.opacity(0.12)
                     LinearGradient(
-                        colors: [.clear, .white.opacity(0.55), .white.opacity(0.9), .white.opacity(0.55), .clear],
+                        colors: [.clear, .white.opacity(0.10), .white.opacity(0.28), .white.opacity(0.10), .clear],
                         startPoint: .top, endPoint: .bottom
                     )
-                    .frame(height: geo.size.height * 0.22)
-                    .blendMode(.plusLighter)
+                    .frame(height: geo.size.height * 0.18)
+                    .overlay(alignment: .center) {
+                        // A crisp scan line through the middle of the soft band.
+                        Rectangle().fill(.white.opacity(0.7)).frame(height: 1.5)
+                            .shadow(color: .white.opacity(0.8), radius: 6)
+                    }
                     .offset(y: phase * geo.size.height)
                     .frame(maxHeight: .infinity, alignment: .top)
                 }
