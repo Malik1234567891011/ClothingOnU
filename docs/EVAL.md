@@ -29,3 +29,15 @@ Every call took 20–25 s. No safety blocks, no fallbacks.
 - The app offers an optional crop for every garment screenshot, with the tip "page shows several colours? crop to the one you want".
 - The app strongly asks for a clear face photo in onboarding. Identity comes mostly from the face.
 - Pro is fast enough (~22 s) to be the default. The fast model stays as the automatic fallback.
+
+## 2026-11-14: in-app, Simulator against production (clothingonu.vercel.app)
+
+Driven through the real UI: photo picker, pins, crop sheet, note, angle bar, drag and hold.
+
+| Step | Result |
+|---|---|
+| Onboarding (Drake Bell front + face photo) → model | ✅ ~30 s. Strong likeness. |
+| Jacket (cropped) + jeans, note "leave the jacket unzipped with a plain white t-shirt under" | ✅ Matches the note. ¾/side/back rendered in parallel (~25 s). Drag-to-turn and hold-to-compare work. |
+| Fresh model, jacket + jeans + Vans, no note | ✅ The jacket stays open over the base grey tee (layering rule). Vans pattern and colour are exact. |
+
+Bugs found this way and fixed (see git log): a stage double-offset while rendering; a Vision failure in the Simulator reported as "no person"; the panel covering the feet; and a production outage when a git push deployed the repo root. Vercel's root directory is now `server`.
