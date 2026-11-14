@@ -1,0 +1,19 @@
+# Secrets
+.env
+.env.*
+!.env.example
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
+# Generated project (regenerate with `xcodegen`)
+# (kept in git so the repo opens without tooling)
+# Node
+node_modules/
+.vercel/
+# Test fixtures of real people never go in a public repo
+testdata/
+*.local.*
+.DS_Store
