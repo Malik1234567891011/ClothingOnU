@@ -35,6 +35,9 @@ final class Studio {
 
     let library: Library
     private let renderer: any Renderer
+    /// Render ¾/side/back as soon as the front lands, so turning around is (usually) instant.
+    /// Costs 3 more renders per look (~$0.43) but waiting on a tap felt broken.
+    let autoRenderAngles: Bool
     private var tasks: [Task<Void, Never>] = []
     private var generation = 0
 
@@ -43,9 +46,10 @@ final class Studio {
     /// Stay under Vercel's 4.5 MB request cap with room for JSON overhead.
     static let requestBudgetBytes = 3_800_000
 
-    init(library: Library, renderer: any Renderer) {
+    init(library: Library, renderer: any Renderer, autoRenderAngles: Bool = true) {
         self.library = library
         self.renderer = renderer
+        self.autoRenderAngles = autoRenderAngles
     }
 
     var currentLook: Look? { currentLookID.flatMap(library.look) }
@@ -152,6 +156,8 @@ final class Studio {
             let look = try library.addLook(garments: garments, note: note, front: data)
             show(look: look.id)
             tryOnJob = .idle
+            // Anchored on the front we just made, so they can't start any earlier than this.
+            if autoRenderAngles { renderMissingAngles() }
         } catch {
             guard gen == generation else { return }
             tryOnJob = error is CancellationError ? .idle : .failed(Self.normalise(error))

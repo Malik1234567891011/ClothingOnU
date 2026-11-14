@@ -20,7 +20,7 @@ docs/     RESEARCH.md (why it's built this way), EVAL.md (real-model test result
    - Optionally crop it to the exact item. This fixes pages that show several colours.
    - Optionally add a note ("leave it unzipped, hood up"); one-tap chips suggest notes for the items you've picked.
    - Press **Try it on**. A render takes about 20–25 s.
-3. **Every angle.** Drag across the photo, or tap ¾ / Side / Back. The other angles render in parallel, anchored on the front result so the outfit stays consistent. Press and hold the photo to compare with your plain model.
+3. **Every angle.** As soon as the front render lands, ¾, side and back render in the background, in parallel, anchored on the front so the outfit stays consistent. By the time you've looked at the front they're usually ready: drag across the photo or tap ¾ / Side / Back. Press and hold the photo to compare with your plain model.
 4. **Looks.** Every try-on is saved on the device with all its angles. You can bring any look back and change it.
 
 ### Why not a 3D model?
@@ -34,7 +34,7 @@ Reconstructing your body in 3D is doable. Simulating an arbitrary garment from o
   - identity and body are locked ("do not slim or idealise")
   - screenshots are de-cluttered (ignore the UI and other colourways)
   - the user's note is fenced as styling-only
-- **Cost.** About $0.134 per image. A full look (front + 3 angles) is about $0.54; the one-time model is about $0.13.
+- **Cost** (measured from Google's billed token counts): about $0.14 per image, almost all of it the output image. Adding clothes is free. Each Try it on is $0.14 for the front plus $0.43 for the three auto-rendered angles, so **≈ $0.57 per look**. The one-time model is $0.14.
 
 ## Run it
 
@@ -74,5 +74,5 @@ Debug-only launch hooks:
 ## Known limits / next steps
 - **Vision in the Simulator.** Body-pose detection doesn't run in the Simulator, so photo checks and pin placement fall back gracefully there. They work on a device.
 - **App auth.** `APP_TOKEN` ships inside the app, which is a speed bump, not real auth. Before a public launch, add App Attest/DeviceCheck plus per-user quotas, because every render costs money.
-- **Speed.** Renders take about 20–25 s. Rendering the angles in the background as soon as the front finishes would make turning feel instant, at about 3× the cost per look.
+- **Speed.** The front takes about 20–25 s; angles land about 25 s later. To cut cost, set `autoRenderAngles: false` (render on tap) or move angle views to Nano Banana 2.1 (~$0.05 each) after an eval.
 - **Links.** Only screenshots are supported today. Product links would need scraping per store.

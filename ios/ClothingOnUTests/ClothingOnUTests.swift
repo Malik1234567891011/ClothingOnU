@@ -207,9 +207,9 @@ struct StudioTests {
 
         let look = try #require(studio.currentLook)
         #expect(look.images[.front] != nil)
-        #expect(studio.hasMissingAngles)
+        // The other angles start on their own as soon as the front lands.
+        #expect(studio.angleState(.back, for: look).isWorking)
 
-        studio.renderMissingAngles()
         for _ in 0..<200 where studio.hasMissingAngles { try await Task.sleep(for: .milliseconds(10)) }
         #expect(!studio.hasMissingAngles)
         let views = fake.requests.filter { $0["kind"] as? String == "view" }.compactMap { $0["view"] as? String }
@@ -229,6 +229,18 @@ struct StudioTests {
         #expect(studio.tryOnJob.error == .blocked("Blocked by safety filter."))
         #expect(lib.looks.isEmpty)
         #expect(studio.tryOnJob.error?.isRetryable == false)
+    }
+
+    @Test func anglesWaitForATapWhenAutoRenderIsOff() async throws {
+        let lib = try readyLibrary()
+        let fake = FakeRenderer()
+        let studio = Studio(library: lib, renderer: fake, autoRenderAngles: false)
+        await studio.buildAvatar()
+        try lib.setGarment(solidImage(200, 200), slot: .top)
+        await studio.tryOn()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(fake.requests.filter { $0["kind"] as? String == "view" }.isEmpty)
+        #expect(studio.hasMissingAngles)
     }
 
     @Test func noTryOnWithoutGarments() async throws {
