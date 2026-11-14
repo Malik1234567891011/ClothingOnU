@@ -1,0 +1,5 @@
+// Public defaults. Secrets (the app token) live in Secrets.xcconfig, which is gitignored.
+// `//` starts a comment in xcconfig, hence the $() trick in URLs.
+API_BASE_URL = https:/$()/clothingonu.vercel.app
+APP_TOKEN =
+#include? "Secrets.xcconfig"

@@ -17,3 +17,5 @@ node_modules/
 testdata/
 *.local.*
 .DS_Store
+ios/Config/Secrets.xcconfig
+ios/*.xcodeproj/xcuserdata/
