@@ -85,7 +85,10 @@ function garmentReferences(garments: Garment[]): Part[] {
   return garments.flatMap((g, i) => [
     txt(
       `GARMENT ${i + 1}: ${SLOT_WORDS[g.slot]}. This is a screenshot from an online shop. It may contain website UI, text, prices, ` +
-        `colour swatches, or a different model wearing the item. Use ONLY the garment itself, in the colour of the main product image. ` +
+        `colour swatches, or a different model wearing the item. Use ONLY the garment itself. ` +
+        `COLOUR: product pages often show several colourways at once. Use the SELECTED colourway: the one named in text such as ` +
+        `"Color: Black" / "Colour: Navy", or the highlighted swatch, which is normally the colour of the first (top-left, largest) product photo. ` +
+        `Never mix colourways or take the colour from a secondary photo. ` +
         `Reproduce its colour, fabric, texture, pattern, print, logos, hardware (zips, buttons, toggles), length and cut faithfully.`,
     ),
     img(g),
